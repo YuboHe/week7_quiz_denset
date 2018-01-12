@@ -60,10 +60,66 @@ def densenet(images, num_classes=1001, is_training=False,
     with tf.variable_scope(scope, 'DenseNet', [images, num_classes]):
         with slim.arg_scope(bn_drp_scope(is_training=is_training,
                                          keep_prob=dropout_keep_prob)) as ssc:
-            pass
-            ##########################
-            # Put your code here.
-            ##########################
+            # 按照论文 DenseNet-121
+            # 
+            scope = 'conv1'
+            net = slim.conv2d(images, growth*2 ,[7, 7], stride = 2, scope = scope)
+            end_points[scope] = net
+
+            #Pooling, [3,3] max pool, stride 2
+            scope = 'max_pool'
+            net = slim.max_pool2d(net, [3,3], stride = 2, scope = scope)
+
+            scope = 'block1'
+            net = block(net, 6, growth, scope = scope)
+            end_points[scope] = net
+
+            scope = 'compress1'
+            net = bn_act_conv_drp(net, reduce_dim(net), [1, 1], scope = scope)
+            end_points[scope] = net
+
+            scope = 'avgpool1'
+            net = slim.avg_pool2d(net, [2, 2], stride = 2, scope = scope)
+            end_points[scope] = net
+            
+            scope = 'block2'
+            net = block(net, 12, growth, scope = scope)
+            end_points[scope] = net
+
+            scope = 'compress2'
+            net = bn_act_conv_drp(net, reduce_dim(net), [1, 1], scope = scope)
+            end_points[scope] = net
+
+            scope = 'avgpool2'
+            net = slim.avg_pool2d(net, [2, 2], stride = 2, scope = scope)
+            end_points[scope] = net
+
+            scope = 'block3'
+            net = block(net, 24, growth, scope = scope)
+            end_points[scope] = net
+
+            scope = 'compress3'
+            net = bn_act_conv_drp(net, reduce_dim(net), [1, 1], scope = scope)
+            end_points[scope] = net
+
+            scope = 'avgpool3'
+            net = slim.avg_pool2d(net, [2, 2], stride = 2, scope = scope)
+            end_points[scope] = net
+
+            scope = 'block4'
+            net = block(net, 16, growth, scope = scope)
+            end_points[scope] = net
+
+            scope = 'global-avgpool'
+            net = slim.avg_pool2d(net, [2, 2], scope = scope)
+            end_points[scope] = net
+
+            logits = slim.fully_connected(net, num_classes,
+                                              activation_fn=None,
+                                              scope='Logits')
+            end_points['Logits'] = logits
+            end_points['Predictions'] = tf.nn.softmax(logits, name = 'Prediction')
+
 
     return logits, end_points
 
